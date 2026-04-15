@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import firebaseAppletConfigImport from '../firebase-applet-config.json';
@@ -25,10 +25,11 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Initialize Firestore with the specific database ID if provided and not default
+// Use experimentalForceLongPolling to improve connectivity in sandboxed/iframe environments
 const dbId = firebaseAppletConfig.firestoreDatabaseId;
-const firestoreDb = (dbId && dbId !== '(default)') 
-  ? getFirestore(app, dbId) 
-  : getFirestore(app);
+const firestoreDb = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, (dbId && dbId !== '(default)') ? dbId : undefined);
 
 export const db = firestoreDb;
 

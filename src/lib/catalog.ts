@@ -27,6 +27,10 @@ export function getShowcaseFallback() {
   return showcaseListings.map((x) => normalizeListing(x as Record<string, unknown>));
 }
 
+export function getNewListingsFallback() {
+  return valorantListings.map((x) => normalizeListing(x as Record<string, unknown>));
+}
+
 export function getMockListingsForCategoryTab(category: string): Record<string, unknown>[] {
   const sc = showcaseListings.map((x) => normalizeListing(x as Record<string, unknown>));
   const va = valorantListings.map((x) => normalizeListing(x as Record<string, unknown>));

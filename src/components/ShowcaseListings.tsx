@@ -25,7 +25,8 @@ export default function ShowcaseListings() {
 
   useEffect(() => {
     let cancelled = false;
-    const timeoutMs = 12000;
+    let retryCount = 0;
+    const maxRetries = 2;
 
     const run = async () => {
       try {
@@ -33,7 +34,7 @@ export default function ShowcaseListings() {
         const snapshot = await Promise.race([
           getDocs(q),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Vitrin ilanları yüklenirken zaman aşımı oluştu. Lütfen internet bağlantınızı kontrol edin veya sayfayı yenileyin.')), 20000)
+            setTimeout(() => reject(new Error('Vitrin ilanları yüklenirken zaman aşımı oluştu. Lütfen internet bağlantınızı kontrol edin veya sayfayı yenileyin.')), 30000)
           ),
         ]);
         if (cancelled) return;
@@ -43,7 +44,13 @@ export default function ShowcaseListings() {
         }));
         mergeRemote(pairs);
       } catch (e) {
-        console.error('ShowcaseListings:', e);
+        console.error('ShowcaseListings Error:', e);
+        if (!cancelled && retryCount < maxRetries) {
+          retryCount++;
+          console.log(`Retrying showcase fetch (${retryCount}/${maxRetries})...`);
+          setTimeout(run, 2000);
+          return;
+        }
         if (!cancelled) setListings([]);
       } finally {
         if (!cancelled) setLoadingRemote(false);

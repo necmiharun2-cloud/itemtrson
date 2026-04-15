@@ -29,10 +29,18 @@ export default function NewListings() {
 
   useEffect(() => {
     let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 2;
+
     const run = async () => {
       try {
         const q = query(collection(db, 'products'), limit(80));
-        const snapshot = await getDocs(q);
+        const snapshot = await Promise.race([
+          getDocs(q),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Yeni ilanlar yüklenirken zaman aşımı oluştu.')), 30000)
+          ),
+        ]);
         if (cancelled) return;
         const pairs = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -40,7 +48,12 @@ export default function NewListings() {
         }));
         applyPairs(pairs);
       } catch (e) {
-        console.error('NewListings:', e);
+        console.error('NewListings Error:', e);
+        if (!cancelled && retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(run, 2000);
+          return;
+        }
         if (!cancelled) {
           const raw = getNewListingsFallback();
           const mapped = raw.map((row) => mapProductDocToHomeListing(String(row.id ?? ''), row));
