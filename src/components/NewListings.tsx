@@ -1,156 +1,143 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
-import { collection, query, getDocs, limit, orderBy } from 'firebase/firestore';
-import { getShowcaseFallback } from '../lib/catalog';
-
-type Listing = {
-  id: string;
-  title: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  category: string;
-  seller?: {
-    name: string;
-    avatar?: string;
-  };
-  isVitrin?: boolean;
-  type?: string;
-};
+import { collection, query, getDocs, limit } from 'firebase/firestore';
+import { Heart, Clock, ShoppingCart } from 'lucide-react';
+import { getNewListingsFallback } from '../lib/catalog';
+import {
+  mapProductDocToHomeListing,
+  sortDocPairsNewestFirst,
+  isYeniIlanProduct,
+  type HomeListing,
+} from '../lib/homeListingUtils';
 
 export default function NewListings() {
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<HomeListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleCount, setVisibleCount] = useState(20);
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100));
-        const snapshot = await getDocs(q);
-        const fetched = snapshot.docs.map((doc) => {
-          const data = doc.data() as any;
-          return {
-            id: doc.id,
-            title: data.title || 'İlan',
-            price: Number(data.price) || 0,
-            originalPrice: data.originalPrice ? Number(data.originalPrice) : undefined,
-            image: data.image || data.images?.[0] || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80',
-            category: data.category || 'Genel',
-            seller: data.seller || { name: 'Satıcı' },
-            isVitrin: data.isVitrin || data.featured,
-            type: data.type,
-          };
-        });
-        
-        let finalData = fetched.length > 0 ? fetched : (getShowcaseFallback() as Listing[]);
-        if (finalData.length < 30) {
-          finalData = [...finalData, ...finalData, ...finalData].slice(0, 90);
-        }
-        
-        setListings(finalData);
-      } catch (error) {
-        console.error('Error fetching listings:', error);
-        let fallback = getShowcaseFallback() as Listing[];
-        fallback = [...fallback, ...fallback, ...fallback].slice(0, 90);
-        setListings(fallback);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchListings();
+  const applyPairs = useCallback((pairs: { id: string; data: Record<string, unknown> }[]) => {
+    const sorted = sortDocPairsNewestFirst(pairs);
+    const yeni = sorted.filter(({ data }) => isYeniIlanProduct(data));
+    let mapped = yeni.map(({ id, data }) => mapProductDocToHomeListing(id, data));
+    if (mapped.length === 0) {
+      const raw = getNewListingsFallback();
+      mapped = raw.map((row) => mapProductDocToHomeListing(String(row.id ?? ''), row));
+    }
+    setListings(mapped.slice(0, 40));
   }, []);
 
-  // Filter out SERVER TANITIMI to keep it separate
-  const filteredListings = listings.filter(
-    (l) => String((l as any).category).toUpperCase() !== 'SERVER TANITIMI'
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const q = query(collection(db, 'products'), limit(80));
+        const snapshot = await getDocs(q);
+        if (cancelled) return;
+        const pairs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data() as Record<string, unknown>,
+        }));
+        applyPairs(pairs);
+      } catch (e) {
+        console.error('NewListings:', e);
+        if (!cancelled) {
+          const raw = getNewListingsFallback();
+          const mapped = raw.map((row) => mapProductDocToHomeListing(String(row.id ?? ''), row));
+          setListings(mapped.slice(0, 40));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPairs]);
 
-  const visibleListings = filteredListings.slice(0, visibleCount);
+  const visibleListings = listings.slice(0, visibleCount);
 
   return (
     <section className="py-0">
       <div className="w-full">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-1">Yeni İlanlar</h2>
-            <p className="text-white/50 text-sm">Pazara yeni eklenen en güncel ilanlar.</p>
+            <p className="text-white/50 text-sm">
+              Server tanıtımı ve vitrin dışındaki en güncel ilanlar.
+            </p>
           </div>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-            {[...Array(25)].map((_, i) => (
-              <div key={i} className="bg-[#1a1b23] rounded-xl aspect-[3/4] animate-pulse border border-white/5" />
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-[#1a1b23] rounded-xl aspect-[3/4] animate-pulse border border-white/5"
+              />
             ))}
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
               {visibleListings.map((listing, idx) => (
-                <Link
+                <div
                   key={`${listing.id}-${idx}`}
-                  to={`/product/${listing.id}`}
-                  className="group bg-[#1a1b23] rounded-xl overflow-hidden border border-transparent hover:border-white/10 transition-all flex flex-col"
+                  className="group bg-[#1a1b23] rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all flex flex-col relative"
                 >
-                  {/* YENİ İLAN Badge */}
-                  <div className="text-center py-1.5 text-[10px] font-bold tracking-wider text-white bg-blue-500">
-                    YENİ İLAN
-                  </div>
-                  
-                  {/* Image */}
-                  <div className="relative aspect-[16/9] overflow-hidden shrink-0">
+                  {/* Image Area */}
+                  <Link to={`/product/${listing.id}`} className="relative aspect-[4/5] overflow-hidden block">
                     <img
                       src={listing.image}
                       alt={listing.title}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-3 flex-1 flex flex-col">
-                    {/* Seller Info */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                        {listing.seller?.name?.charAt(0) || 'S'}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[9px] text-white/50 leading-none">SATICI</span>
-                        <span className="text-xs text-white font-medium leading-tight truncate">{listing.seller?.name || 'Satıcı'}</span>
-                      </div>
+                    {/* Online Dot */}
+                    <div className="absolute top-3 left-3 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1a1b23]"></div>
+                    {/* Heart Icon */}
+                    <button className="absolute top-3 right-3 text-white/50 hover:text-red-500 transition-colors z-10" onClick={(e) => e.preventDefault()}>
+                      <Heart className="w-5 h-5" />
+                    </button>
+                    
+                    {/* Time Left Strip */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm p-2 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white/90">
+                      <Clock className="w-3 h-3 text-green-400" />
+                      <span>29 <span className="text-white/50 font-normal">GÜN</span></span>
+                      <span>23 <span className="text-white/50 font-normal">SAAT</span></span>
+                      <span>47 <span className="text-white/50 font-normal">DK</span></span>
                     </div>
+                  </Link>
 
-                    {/* Category */}
-                    <div className="text-[10px] text-white/50 font-medium uppercase tracking-wider mb-1 truncate">
+                  {/* Content Area */}
+                  <div className="p-3 flex-1 flex flex-col">
+                    <Link to={`/product/${listing.id}`} className="text-sm text-white font-bold line-clamp-1 mb-1 hover:text-blue-400 transition-colors">
+                      {listing.title}
+                    </Link>
+                    <div className="text-[11px] text-emerald-400 mb-3 truncate">
                       {listing.category}
                     </div>
-
-                    {/* Title */}
-                    <div className="text-sm text-white font-medium line-clamp-2 leading-snug mb-3 group-hover:text-[#facc15] transition-colors flex-1">
-                      {listing.title}
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-center gap-2 mt-auto">
-                      <span className="text-[#facc15] font-bold text-base">
-                        {listing.price.toFixed(2)} ₺
-                      </span>
-                      {listing.originalPrice && listing.originalPrice > listing.price && (
-                        <span className="text-white/40 text-xs line-through">
-                          {listing.originalPrice.toFixed(2)} ₺
-                        </span>
-                      )}
+                    
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="text-lg font-bold text-white">
+                        {listing.price.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL
+                      </div>
+                      <button className="w-8 h-8 rounded bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white transition-colors">
+                        <ShoppingCart className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 
-            {filteredListings.length > visibleCount && (
+            {listings.length > visibleCount && (
               <div className="mt-8 text-center">
                 <button
-                  onClick={() => setVisibleCount(prev => prev + 30)}
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 20)}
                   className="px-8 py-2.5 rounded-full text-sm font-medium bg-[#8b5cf6] text-white hover:bg-[#7c3aed] transition-colors"
                 >
                   + Daha fazla yeni ilan göster

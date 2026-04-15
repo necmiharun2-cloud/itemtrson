@@ -1,78 +1,230 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Roblox from './pages/Roblox';
+import Product from './pages/Product';
+import IlanPazari from './pages/IlanPazari';
+import AlimIlanlari from './pages/AlimIlanlari';
+import Topluluk from './pages/Topluluk';
+import Magazalar from './pages/Magazalar';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
+import Messages from './pages/Messages';
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
+import Reviews from './pages/Reviews';
+import Notifications from './pages/Notifications';
+import Cart from './pages/Cart';
+import Orders from './pages/Orders';
+import SoldListings from './pages/SoldListings';
+import MyListings from './pages/MyListings';
+import Favorites from './pages/Favorites';
+import OrderDetail from './pages/OrderDetail';
+import Withdraw from './pages/Withdraw';
+import Support from './pages/Support';
+import ForgotPassword from './pages/ForgotPasswordFixed';
+import NotFound from './pages/NotFound';
+import About from './pages/About';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import DistanceSales from './pages/DistanceSales';
+import RefundPolicy from './pages/RefundPolicy';
+import FAQ from './pages/FAQ';
+import Deals from './pages/Deals';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
+import Streamers from './pages/Streamers';
+import StreamerProfile from './pages/StreamerProfile';
+import Giveaways from './pages/Giveaways';
+import CDKey from './pages/CDKey';
+import TopUp from './pages/TopUp';
+import GiftCards from './pages/GiftCards';
+import IlanEkle from './pages/IlanEkle';
+import IlanYukariTasima from './pages/IlanYukariTasima';
+import FavoriSistemi from './pages/FavoriSistemi';
+import AdminPanel from './pages/AdminPanel';
+import TumKategoriler from './pages/TumKategoriler';
+import ServerTanitimi from './pages/ServerTanitimi';
+import ServerTanitimiDetay from './pages/ServerTanitimiDetay';
+import MagazaBasvurusu from './pages/MagazaBasvurusu';
+import BakiyeYukle from './pages/BakiyeYukle';
+import TelitIhlali from './pages/TelitIhlali';
+import ShopierCheckout from './pages/ShopierCheckout';
+import ShopierPaymentResult from './pages/ShopierPaymentResult';
+import TradeOffer from './pages/TradeOffer';
+import TradeOfferDetail from './pages/TradeOfferDetail';
+import TradeOffersList from './pages/TradeOffersList';
+import { missingFirebaseEnvKeys } from './firebase';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { useEffect, useRef } from 'react';
+import { useAuth } from './contexts/AuthContext';
+import { runAllAutomations, loadAutomationConfig } from './services/automationService';
+
+const INTERVAL_MS = 30 * 60 * 1000; // 30 dakika
+
+function AutomationRunner() {
+  const { profile } = useAuth();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAdmin = profile?.role === 'admin';
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const run = async () => {
+      try {
+        const config = await loadAutomationConfig();
+        await runAllAutomations(config);
+      } catch { /* silent background */ }
+    };
+    const delay = setTimeout(run, 8000);
+    timerRef.current = setInterval(run, INTERVAL_MS);
+    return () => {
+      clearTimeout(delay);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isAdmin]);
+
+  return null;
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-      {/* Navbar */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold text-xl">
-              İ
-            </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">İtemsatış <span className="text-blue-600">Market</span></span>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <a href="#" className="text-gray-600 hover:text-blue-600 font-medium">İlanlar</a>
-            <a href="#" className="text-gray-600 hover:text-blue-600 font-medium">Kategoriler</a>
-            <a href="#" className="text-gray-600 hover:text-blue-600 font-medium">Destek</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <button className="text-gray-600 hover:text-gray-900 font-medium px-3 py-2">Giriş Yap</button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Kayıt Ol
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 sm:p-12 text-white mb-12 shadow-lg">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-            Dijital Dünyanın Pazaryerine Hoş Geldiniz
-          </h1>
-          <p className="text-blue-100 text-lg max-w-2xl mb-8">
-            Oyun hesapları, dijital pinler, yazılımlar ve daha fazlasını güvenle alın, satın.
-          </p>
-          <div className="flex gap-4">
-            <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-50 transition-colors shadow-sm">
-              İlanları Keşfet
-            </button>
-            <button className="bg-blue-500 bg-opacity-30 border border-blue-400 text-white px-6 py-3 rounded-lg font-bold hover:bg-opacity-40 transition-colors">
-              Ücretsiz İlan Ver
-            </button>
-          </div>
-        </div>
-
-        {/* Placeholder for Listings */}
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Öne Çıkan İlanlar</h2>
-          <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">Tümünü Gör &rarr;</a>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
-              <div className="h-40 bg-gray-200 flex items-center justify-center text-gray-400">
-                Görsel {item}
-              </div>
-              <div className="p-4">
-                <div className="text-xs font-semibold text-blue-600 mb-1">Oyun Hesapları</div>
-                <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">Örnek İlan Başlığı - Seviye 99 Full Hesap</h3>
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-lg font-bold text-gray-900">₺250.00</span>
-                  <span className="text-xs text-gray-500">Bugün eklendi</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
+    <AppErrorBoundary>
+      <AuthProvider>
+        <CartProvider>
+          <FavoritesProvider>
+            <LanguageProvider>
+              <BrowserRouter>
+                <AutomationRunner />
+                {missingFirebaseEnvKeys.length > 0 && (
+                  <div className="max-w-[1400px] mx-auto px-4 pt-3">
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-200 text-xs rounded-lg px-3 py-2">
+                      Firebase env eksik: {missingFirebaseEnvKeys.join(', ')}. Vercel Environment Variables alanına ekleyip redeploy et.
+                    </div>
+                  </div>
+                )}
+                <Toaster position="top-center" toastOptions={{
+                  style: {
+                    background: '#1a1b23',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                  },
+                  success: {
+                    style: {
+                      background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%)',
+                      border: '1px solid rgba(34,197,94,0.5)',
+                    },
+                    iconTheme: {
+                      primary: '#22c55e',
+                      secondary: '#1a1b23'
+                    }
+                  },
+                  error: {
+                    style: {
+                      background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%)',
+                      border: '1px solid rgba(239,68,68,0.5)',
+                    },
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#1a1b23'
+                    }
+                  },
+                  loading: {
+                    style: {
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)',
+                      border: '1px solid rgba(59,130,246,0.5)',
+                    },
+                    iconTheme: {
+                      primary: '#3b82f6',
+                      secondary: '#1a1b23'
+                    }
+                  }
+                }} />
+                <Routes>
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<Home />} />
+              <Route path="roblox" element={<Roblox />} />
+              <Route path="product/:id" element={<Product />} />
+              <Route path="ilan-pazari" element={<IlanPazari />} />
+              <Route path="alim-ilanlari" element={<AlimIlanlari />} />
+              <Route path="topluluk" element={<Topluluk />} />
+              <Route path="server-tanitimi" element={<ServerTanitimi />} />
+              <Route path="server-tanitimi/:id" element={<ServerTanitimiDetay />} />
+              <Route path="tum-kategoriler" element={<TumKategoriler />} />
+              <Route path="magazalar" element={<Magazalar />} />
+                            <Route path="magaza-basvurusu" element={<MagazaBasvurusu />} />
+              <Route path="cekilisler" element={<Giveaways />} />
+              <Route path="cd-key" element={<CDKey />} />
+              <Route path="top-up" element={<TopUp />} />
+              <Route path="hediye-kartlari" element={<GiftCards />} />
+              <Route path="ilan-ekle" element={<IlanEkle />} />
+              <Route path="ilan-duzenle/:id" element={<IlanEkle />} />
+              <Route path="trade/offer/:id" element={<TradeOffer />} />
+              <Route path="trade/offers" element={<TradeOffersList />} />
+              <Route path="trade/offers/:id" element={<TradeOfferDetail />} />
+              <Route path="favori-sistemi" element={<FavoriSistemi />} />
+              <Route path="ilan-yukari-tasima" element={<IlanYukariTasima />} />
+              <Route path="gizlilik-politikasi" element={<Privacy />} />
+              <Route path="mesafeli-satis-sozlesmesi" element={<DistanceSales />} />
+              <Route path="iade-politikasi" element={<RefundPolicy />} />
+              <Route path="legal/telif-ihlali" element={<TelitIhlali />} />
+              <Route path="legal/gizlilik" element={<Navigate to="/gizlilik-politikasi" replace />} />
+              <Route path="legal/iade" element={<Navigate to="/iade-politikasi" replace />} />
+              <Route path="legal/mesafeli-satis" element={<Navigate to="/mesafeli-satis-sozlesmesi" replace />} />
+              <Route path="legal/kullanici-sozlesmesi" element={<Navigate to="/kullanici-sozlesmesi" replace />} />
+              <Route path="sss" element={<FAQ />} />
+              <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
+              <Route path="sifremi-unuttum" element={<ForgotPassword />} />
+              <Route path="hakkimizda" element={<About />} />
+              <Route path="kullanici-sozlesmesi" element={<Terms />} />
+              <Route path="firsatlar" element={<Deals />} />
+              <Route path="blog" element={<Blog />} />
+              <Route path="blog/:slug" element={<BlogPost />} />
+              <Route path="yayincilar" element={<Streamers />} />
+                            <Route path="destekle/:slug" element={<StreamerProfile />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="profile/:id" element={<Profile />} />
+              <Route path="mesajlarim" element={<Messages />} />
+              <Route path="kontrol-merkezi" element={<Dashboard />} />
+              <Route path="ayarlar" element={<Settings />} />
+              <Route path="degerlendirmelerim" element={<Reviews />} />
+              <Route path="bildirimler" element={<Notifications />} />
+              <Route path="sepet" element={<Cart />} />
+              <Route path="odeme/shopier" element={<ShopierCheckout />} />
+              <Route path="odeme/shopier/sonuc" element={<ShopierPaymentResult />} />
+              <Route path="cart" element={<Navigate to="/sepet" replace />} />
+              <Route path="siparislerim" element={<Orders />} />
+              <Route path="orders" element={<Navigate to="/siparislerim" replace />} />
+              <Route path="siparis/:id" element={<OrderDetail />} />
+              <Route path="sattigim-ilanlar" element={<SoldListings />} />
+              <Route path="ilanlarim" element={<MyListings />} />
+              <Route path="favorilerim" element={<Favorites />} />
+              <Route path="para-cek" element={<Withdraw />} />
+                            <Route path="bakiye-yukle" element={<BakiyeYukle />} />
+              <Route path="destek-sistemi" element={<Support />} />
+              <Route path="admin" element={<AdminPanel />} />
+              <Route path="admin/login" element={<Navigate to="/login?next=/admin" replace />} />
+              <Route path="dashboard" element={<Navigate to="/kontrol-merkezi" replace />} />
+              {/* Fallback for other routes */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+          </LanguageProvider>
+      </FavoritesProvider>
+    </CartProvider>
+    </AuthProvider>
+    </AppErrorBoundary>
   );
 }

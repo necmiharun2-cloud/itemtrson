@@ -13,17 +13,17 @@ export default function SocialMediaSection() {
   ];
 
   return (
-    <section className="py-8 text-center relative">
+    <section className="py-2 text-center relative">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#111218] via-[#1e2030] to-[#111218] -z-10 rounded-3xl opacity-50" />
       
-      <div className="mb-8 pt-8">
+      <div className="mb-4 pt-2">
         <span className="text-xs font-bold text-white/40 tracking-widest uppercase mb-2 block bg-white/5 w-max mx-auto px-3 py-1 rounded-full">• KEŞFET</span>
         <h2 className="text-3xl font-bold text-white mb-2">Sosyal Medya İlanları</h2>
         <p className="text-white/60 text-sm">Popüler sosyal medya kategorilerindeki binlerce ilanı keşfet!</p>
       </div>
 
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-4 px-4 max-w-[1400px] mx-auto mb-12">
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2 px-4 w-full mx-auto mb-4">
         {platforms.map((platform) => (
           <Link
             key={platform.name}

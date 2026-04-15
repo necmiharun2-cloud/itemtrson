@@ -23,7 +23,7 @@ export default function HeroSection() {
 
   return (
     <div className="bg-[#0f1015] pt-4 pb-8">
-      <div className="container mx-auto px-4 max-w-[1400px]">
+      <div className="w-full px-4">
         
         {/* Top Hero Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-6">

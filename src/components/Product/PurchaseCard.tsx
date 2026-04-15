@@ -174,23 +174,37 @@ export default function PurchaseCard({ product }: PurchaseCardProps) {
 
         {/* Actions */}
         <div className="space-y-3 mb-6">
-          <button 
-            onClick={handleBuyNow}
-            className="w-full btn-buy text-white font-extrabold py-3.5 rounded flex items-center justify-center gap-2 transition-colors"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            Hemen Satın Al ({(totalUnit * quantity).toFixed(2)} ₺)
-          </button>
-          
-          <div className="flex gap-2">
+          {product.listingType !== 'trade_only' && (
+            <>
+              <button 
+                onClick={handleBuyNow}
+                className="w-full btn-buy text-white font-extrabold py-3.5 rounded flex items-center justify-center gap-2 transition-colors"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                Hemen Satın Al ({(totalUnit * quantity).toFixed(2)} ₺)
+              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleAddToCart}
+                  className="flex-1 btn-buy text-white font-extrabold py-3.5 rounded flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  Sepete Ekle
+                </button>
+              </div>
+            </>
+          )}
+
+          {product.isTradeAllowed && (
             <button 
-              onClick={handleAddToCart}
-              className="flex-1 btn-buy text-white font-extrabold py-3.5 rounded flex items-center justify-center gap-2 transition-colors"
+              onClick={() => navigate(`/trade/offer/${product.id}`)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-3.5 rounded flex items-center justify-center gap-2 transition-colors"
             >
-              <ShoppingCart className="w-5 h-5" />
-              Sepete Ekle
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+              Takas Teklif Et
             </button>
-          </div>
+          )}
         </div>
 
         <div className="relative flex items-center justify-center mb-6">

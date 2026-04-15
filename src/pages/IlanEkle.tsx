@@ -164,6 +164,13 @@ export default function IlanEkle() {
     autoDeliveryMessage: '',
     stock: '1',
     productType: 'account' as 'account' | 'epin',
+    listingType: 'sell_only' as 'sell_only' | 'trade_only' | 'sell_trade',
+    isTradeAllowed: false,
+    acceptsCashDifference: false,
+    estimatedTradeValue: '',
+    desiredCategories: [] as string[],
+    desiredGames: [] as string[],
+    minTradeValue: '',
   });
 
   const [smartAnalysis, setSmartAnalysis] = useState<SmartListingAnalysis | null>(null);
@@ -206,6 +213,13 @@ export default function IlanEkle() {
           autoDeliveryMessage: String(listing.autoDeliveryMessage || ''),
           stock: String(Number(listing.stock || 1) || 1),
           productType: listing.productType === 'epin' ? 'epin' : 'account',
+          listingType: listing.listingType || 'sell_only',
+          isTradeAllowed: Boolean(listing.isTradeAllowed),
+          acceptsCashDifference: Boolean(listing.acceptsCashDifference),
+          estimatedTradeValue: String(listing.estimatedTradeValue || ''),
+          desiredCategories: listing.desiredCategories || [],
+          desiredGames: listing.desiredGames || [],
+          minTradeValue: String(listing.minTradeValue || ''),
         }));
 
         setImagePreview(typeof listing.image === 'string' ? listing.image : null);
@@ -329,6 +343,8 @@ export default function IlanEkle() {
         price: parseFloat(formData.price),
         stock: formData.productType === 'epin' ? 0 : (parseInt(formData.stock) || 1),
         image: imageUrl,
+        estimatedTradeValue: formData.isTradeAllowed ? parseFloat(formData.estimatedTradeValue) || 0 : 0,
+        minTradeValue: formData.isTradeAllowed ? parseFloat(formData.minTradeValue) || 0 : 0,
         updatedAt: serverTimestamp(),
       };
 
@@ -791,6 +807,98 @@ export default function IlanEkle() {
                     <div className="flex justify-between mt-2">
                       <p className="text-xs text-gray-500">Min 20 karakter gerekli</p>
                       <p className="text-xs text-gray-500">{formData.description.length}/1000</p>
+                    </div>
+                  </div>
+
+                  {/* Takas Ayarları */}
+                  <div className="border-t border-white/5 pt-6 mt-6">
+                    <h3 className="text-lg font-bold text-white mb-4">Takas Ayarları</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                          İlan Tipi *
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, listingType: 'sell_only', isTradeAllowed: false })}
+                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                              formData.listingType === 'sell_only'
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                                : 'border-white/5 bg-[#111218] text-gray-400 hover:border-white/10'
+                            }`}
+                          >
+                            Sadece Satış
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, listingType: 'trade_only', isTradeAllowed: true })}
+                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                              formData.listingType === 'trade_only'
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                                : 'border-white/5 bg-[#111218] text-gray-400 hover:border-white/10'
+                            }`}
+                          >
+                            Sadece Takas
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, listingType: 'sell_trade', isTradeAllowed: true })}
+                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                              formData.listingType === 'sell_trade'
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                                : 'border-white/5 bg-[#111218] text-gray-400 hover:border-white/10'
+                            }`}
+                          >
+                            Satış + Takas
+                          </button>
+                        </div>
+                      </div>
+
+                      {formData.isTradeAllowed && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[#111218] rounded-xl border border-white/5">
+                          <div>
+                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                              Tahmini Takas Değeri (₺) *
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.estimatedTradeValue}
+                              onChange={(e) => setFormData({ ...formData, estimatedTradeValue: e.target.value })}
+                              placeholder="Örn: 500"
+                              className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#5b68f6] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                              Min. Kabul Edilecek Değer (₺)
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.minTradeValue}
+                              onChange={(e) => setFormData({ ...formData, minTradeValue: e.target.value })}
+                              placeholder="Örn: 400"
+                              className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#5b68f6] transition-colors"
+                            />
+                          </div>
+                          <div className="md:col-span-2 flex items-center justify-between p-3 bg-[#1a1b23] rounded-xl border border-white/5">
+                            <div>
+                              <p className="text-sm font-medium text-white">Nakit Fark Kabul Ediyor mu?</p>
+                              <p className="text-xs text-gray-400">Takas tekliflerinde üstüne nakit ödeme almayı kabul ediyorsanız açın.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                className="sr-only peer"
+                                checked={formData.acceptsCashDifference}
+                                onChange={(e) => setFormData({ ...formData, acceptsCashDifference: e.target.checked })}
+                              />
+                              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>{/* /left form */}

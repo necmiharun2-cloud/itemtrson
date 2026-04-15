@@ -1,4 +1,4 @@
-import { LayoutGrid, Store, ShoppingBag, Gift, Building2, Key, CreditCard, CreditCard as GiftCard, Users, Megaphone } from 'lucide-react';
+import { LayoutGrid, Store, ShoppingBag, Gift, Building2, Key, CreditCard, CreditCard as GiftCard, Users, Megaphone, ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,17 +49,17 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav ref={navRef} className="bg-black/35 backdrop-blur border-b border-white/10 relative z-40">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          <ul className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
+    <nav ref={navRef} className="bg-[#1a1b23] border-b border-white/5 relative z-40">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-12">
+          <ul className="flex items-center gap-6 overflow-x-auto scrollbar-hide w-full">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               const isCategoriesItem = item.hasDropdown;
               return (
                 <li
                   key={item.name}
-                  className="relative"
+                  className="relative h-full flex items-center"
                   onMouseEnter={() => isCategoriesItem && setIsCategoriesOpen(true)}
                   onMouseLeave={() => {
                     if (isCategoriesItem && !isCategoriesPinned) setIsCategoriesOpen(false);
@@ -79,17 +79,16 @@ export default function Navbar() {
                         setIsCategoriesOpen(true);
                       }
                     }}
-                    className={`flex items-center gap-2 text-sm font-medium transition-all duration-300 whitespace-nowrap group ${
+                    className={`flex items-center gap-2 text-[13px] font-bold uppercase tracking-wide transition-all duration-300 whitespace-nowrap group h-full px-2 ${
                       item.color 
-                        ? `${item.color} drop-shadow-[0_0_8px_rgba(234,179,8,0.6)] hover:drop-shadow-[0_0_12px_rgba(234,179,8,0.9)]` 
+                        ? `${item.color} hover:text-white` 
                         : isActive 
-                          ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]' 
-                          : 'text-white/75 hover:text-white hover:drop-shadow-[0_0_14px_rgba(255,106,0,0.80)]'
+                          ? 'text-white border-b-2 border-blue-500' 
+                          : 'text-white/70 hover:text-white'
                     }`}
                   >
-                    <item.icon className={`h-4 w-4 transition-transform duration-300 ${!item.color && !isActive ? 'group-hover:scale-110' : ''}`} />
                     {item.name}
-                    {item.hasDropdown && <span className="text-[10px] ml-1">▼</span>}
+                    {item.hasDropdown && <ChevronDown className="w-4 h-4 ml-1" />}
                   </Link>
                 </li>
               );
@@ -118,7 +117,7 @@ export default function Navbar() {
           }}
         >
           <div
-            className="max-w-[1400px] mx-auto"
+            className="w-full"
             onClick={() => {
               setIsCategoriesOpen(false);
               setIsCategoriesPinned(false);

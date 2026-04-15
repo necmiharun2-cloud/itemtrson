@@ -28,19 +28,19 @@ export default function Home() {
       <HeroSection />
 
       {/* Stories Strip - Game Stats Bar */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-1">
+      <div className="w-full px-4 mt-1">
         <StoriesStrip />
       </div>
 
       {/* Popular Categories Grid */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-4">
+      <div className="w-full px-4 mt-4">
         <PopularCategories />
       </div>
 
       {/* 2-Column Layout for Main Content and Sidebar */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-6 flex flex-col lg:flex-row gap-4">
+      <div className="w-full px-4 mt-4 flex flex-col lg:flex-row gap-4">
         {/* Main Content (Left ~75%) */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* Showcase Listings - Vitrin İlanları */}
           <ShowcaseListings />
 
@@ -56,54 +56,54 @@ export default function Home() {
 
         {/* Sidebar (Right ~25%) */}
         <div className="w-full lg:w-[320px] shrink-0">
-          <div className="sticky top-24 flex flex-col gap-6">
+          <div className="sticky top-24 flex flex-col gap-4">
             <HomeSidebar />
           </div>
         </div>
       </div>
 
       {/* Social Media Section */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-2">
         <SocialMediaSection />
       </div>
 
       {/* Featured Products Carousel */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-4">
         <FeaturedProductsCarousel />
       </div>
 
       {/* Game Money Section */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-10">
         <GameMoneySection />
       </div>
 
       {/* E-Pin Section */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-10">
         <EPinSection />
       </div>
 
       {/* Deals Section with Countdown Timer */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-10">
         <DealsSection />
       </div>
 
       {/* CD Key Best Sellers */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-10">
         <CdKeyBestSellers />
       </div>
 
       {/* Budget Tiles - Price-based browsing */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10">
+      <div className="w-full px-4 mt-10">
         <BudgetTiles />
       </div>
 
       {/* Blog Preview Section */}
-      <div className="max-w-[1400px] mx-auto px-4 mt-10 mb-10">
+      <div className="w-full px-4 mt-10 mb-10">
         <BlogPreviewSection />
       </div>
 
       {/* Static SEO content block - crawlable by all bots */}
-      <div className="max-w-[1400px] mx-auto px-4 pb-8">
+      <div className="w-full px-4 pb-8">
         <div className="border-t border-white/5 pt-8">
           <h2 className="text-white font-bold text-lg mb-3">itemTR — Türkiye'nin Dijital Oyun Pazarı</h2>
           <p className="text-gray-400 text-sm leading-relaxed mb-4">

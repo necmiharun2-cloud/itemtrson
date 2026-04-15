@@ -4,8 +4,9 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export default function TopBar() {
   const settings = useSiteSettings();
+  const slogan = settings.topBarMessage || 'Güvenli al, hızlı teslim al, kazançlı sat — dijital pazarda itemTR ile öne çık.';
   
-  // Rotating featured products like itemsatis.com
+  // Rotating featured products like itemTR
   const featuredProducts = [
     { name: 'Roblox Robux', description: 'Sınırsız Eğlence, En Uygun Fiyatlı Robux', path: '/roblox' },
     { name: 'Valorant VP', description: 'Hızlı Teslimat, Güvenli Alışveriş', path: '/ilan-pazari?q=Valorant' },
@@ -17,37 +18,25 @@ export default function TopBar() {
   const currentFeatured = featuredProducts[0];
 
   return (
-    <div className="bg-[#1a1d2e] border-b border-white/5 hidden md:block">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between">
-        <div className="flex items-center">
-          <Link 
-            to={currentFeatured.path}
-            className="flex items-center gap-2 text-white/80 text-[11px] font-medium hover:text-white transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="font-bold text-yellow-500">{currentFeatured.name}</span>
-            <span>- {currentFeatured.description}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+    <div className="bg-[#111218] border-b border-white/5 hidden md:block">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-10 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link to="/hakkimizda" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Hakkımızda</Link>
+          <Link to="/sss" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">S.S.S</Link>
+          <Link to="/marka-yonergeleri" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Marka Yönergeleri</Link>
+          <Link to="/destek-sistemi" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors flex items-center gap-1">
+            <Phone className="w-3 h-3" /> Whatsapp Destek
           </Link>
+          <Link to="/steam-cafe" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Steam Internet Cafe</Link>
+          <Link to="/siparislerim" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Sipariş Sorgula</Link>
+          <Link to="/takas-koruma" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Takas Koruma</Link>
+          <Link to="/blog" className="text-white/60 hover:text-white text-[12px] font-medium transition-colors">Blog</Link>
         </div>
 
-        <div className="flex items-center gap-6">
-          <Link to="/destek-sistemi" className="flex items-center gap-1.5 text-white/70 hover:text-white text-[11px] font-medium transition-colors">
-            <LifeBuoy className="w-3.5 h-3.5" />
-            Destek Sistemi
-          </Link>
-          <Link to="/blog" className="flex items-center gap-1.5 text-white/70 hover:text-white text-[11px] font-medium transition-colors">
-            <FileText className="w-3.5 h-3.5" />
-            Blog
-          </Link>
-          <Link to="/iletisim" className="flex items-center gap-1.5 text-white/70 hover:text-white text-[11px] font-medium transition-colors">
-            <Phone className="w-3.5 h-3.5" />
-            İletişim
-          </Link>
-          <Link to="/sss" className="flex items-center gap-1.5 text-white/70 hover:text-white text-[11px] font-medium transition-colors">
-            <HelpCircle className="w-3.5 h-3.5" />
-            S.S.S.
-          </Link>
+        <div className="flex items-center gap-4">
+          <button className="text-white/60 hover:text-white transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+          </button>
         </div>
       </div>
     </div>
