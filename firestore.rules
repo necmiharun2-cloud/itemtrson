@@ -126,12 +126,22 @@ service cloud.firestore {
                'isVitrin',
                'isFeatured',
                'moderationStatus',
-               'moderationReason'
+               'moderationReason',
+               'listingType',
+               'isTradeAllowed',
+               'acceptsCashDifference',
+               'estimatedTradeValue',
+               'desiredCategories',
+               'desiredGames',
+               'minTradeValue',
+               'lockedByTradeId',
+               'autoDeliveryMessage',
+               'updatedAt'
              ]) &&
              data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
              data.price is number && data.price >= 0 &&
              data.sellerId is string &&
-             data.status in ['active', 'sold', 'inactive', 'rejected', 'suspended'] &&
+             data.status in ['active', 'sold', 'inactive', 'rejected', 'suspended', 'locked'] &&
              (!(data.keys().hasAny(['oldPrice'])) || (data.oldPrice is number && data.oldPrice >= 0)) &&
              (!(data.keys().hasAny(['sellerAvatar'])) || data.sellerAvatar is string) &&
              (!(data.keys().hasAny(['type'])) || data.type in ['buy', 'sell']) &&
@@ -521,6 +531,38 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isStaff() && isValidSiteSettings(request.resource.data);
       allow delete: if false;
+    }
+
+    // ===============================================================
+    // Trade System Rules
+    // ===============================================================
+
+    match /trade_offers/{offerId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderUserId || request.auth.uid == resource.data.receiverUserId || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.senderUserId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.senderUserId || request.auth.uid == resource.data.receiverUserId || isAdmin());
+    }
+
+    match /trade_offer_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+    }
+
+    match /trade_status_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    match /trade_messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    match /trade_disputes/{disputeId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderUserId || request.auth.uid == resource.data.receiverUserId || isStaff());
+      allow create: if isAuthenticated();
+      allow update: if isStaff();
     }
   }
 }

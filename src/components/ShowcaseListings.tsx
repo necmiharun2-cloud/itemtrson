@@ -33,7 +33,7 @@ export default function ShowcaseListings() {
         const snapshot = await Promise.race([
           getDocs(q),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Vitrin isteği zaman aşımı')), timeoutMs)
+            setTimeout(() => reject(new Error('Vitrin ilanları yüklenirken zaman aşımı oluştu. Lütfen internet bağlantınızı kontrol edin veya sayfayı yenileyin.')), 20000)
           ),
         ]);
         if (cancelled) return;

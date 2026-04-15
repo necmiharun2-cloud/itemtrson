@@ -52,6 +52,8 @@ export default function TradeOffersList() {
       case 'accepted': return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Kabul Edildi</span>;
       case 'rejected': return <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><XCircle className="w-3 h-3" /> Reddedildi</span>;
       case 'cancelled': return <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><AlertCircle className="w-3 h-3" /> İptal Edildi</span>;
+      case 'disputed': return <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Anlaşmazlık</span>;
+      case 'countered': return <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><ArrowRightLeft className="w-3 h-3" /> Karşı Teklif</span>;
       default: return <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs font-bold">{status}</span>;
     }
   };

@@ -1,18 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
-import firebaseAppletConfig from '../firebase-applet-config.json';
+import firebaseAppletConfigImport from '../firebase-applet-config.json';
+
+// Handle potential differences in how JSON is imported
+const firebaseAppletConfig = (firebaseAppletConfigImport as any).default || firebaseAppletConfigImport;
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseAppletConfig.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseAppletConfig.authDomain,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseAppletConfig.projectId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseAppletConfig.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseAppletConfig.messagingSenderId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseAppletConfig.appId,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseAppletConfig.measurementId,
+  apiKey: firebaseAppletConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: firebaseAppletConfig.authDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: firebaseAppletConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: firebaseAppletConfig.storageBucket || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: firebaseAppletConfig.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: firebaseAppletConfig.appId || import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: firebaseAppletConfig.measurementId || import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 export const missingFirebaseEnvKeys: string[] = [];
@@ -20,6 +23,30 @@ export const missingFirebaseEnvKeys: string[] = [];
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseAppletConfig.firestoreDatabaseId);
+
+// Initialize Firestore with the specific database ID if provided and not default
+const dbId = firebaseAppletConfig.firestoreDatabaseId;
+const firestoreDb = (dbId && dbId !== '(default)') 
+  ? getFirestore(app, dbId) 
+  : getFirestore(app);
+
+export const db = firestoreDb;
+
+// Test connection as per guidelines
+async function testConnection() {
+  try {
+    // We use a dummy path to test connectivity
+    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
+    console.log("Firestore connection successful.");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. The client is offline. Using fallback if possible.");
+    } else {
+      console.log("Firestore connection test completed (may have permission error, which is fine).");
+    }
+  }
+}
+void testConnection();
+
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'europe-west1');

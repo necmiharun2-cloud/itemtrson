@@ -18,6 +18,7 @@ export default function TradeOffer() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -25,6 +26,10 @@ export default function TradeOffer() {
       navigate('/login');
       return;
     }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const counterId = searchParams.get('counter');
+    if (counterId) setCounterOfferId(counterId);
 
     const fetchData = async () => {
       setLoading(true);
@@ -61,8 +66,30 @@ export default function TradeOffer() {
         );
         const mySnap = await getDocs(q);
         const myItems = mySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Filter out locked/sold items if needed
         setMyListings(myItems);
+
+        // If counter offer, prefill
+        if (counterId) {
+          const counterRef = doc(db, 'trade_offers', counterId);
+          const counterSnap = await getDoc(counterRef);
+          if (counterSnap.exists()) {
+            const counterData = counterSnap.data();
+            setCashOffer(String(counterData.offeredCashAmount || ''));
+            setMessage(`Karşı teklif: ${counterData.message || ''}`);
+            
+            // Fetch items from original offer to pre-select? 
+            // Actually, a counter offer usually means the receiver wants to change the items.
+            // But let's pre-select what was offered if they are still active.
+            const itemsQ = query(collection(db, 'trade_offer_items'), where('tradeOfferId', '==', counterId));
+            const itemsSnap = await getDocs(itemsQ);
+            const offeredListingIds = itemsSnap.docs
+              .filter(d => !d.data().isTarget)
+              .map(d => d.data().listingId);
+            
+            const toSelect = myItems.filter(item => offeredListingIds.includes(item.id));
+            setSelectedListings(toSelect);
+          }
+        }
       } catch (error) {
         console.error('Error fetching trade data:', error);
         toast.error('Bilgiler yüklenirken bir hata oluştu.');
@@ -90,6 +117,36 @@ export default function TradeOffer() {
 
     setSubmitting(true);
     try {
+      // Spam protection: check daily limit (10 offers)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const dailyQ = query(
+        collection(db, 'trade_offers'),
+        where('senderUserId', '==', user?.uid),
+        where('createdAt', '>=', today)
+      );
+      const dailySnap = await getDocs(dailyQ);
+      if (dailySnap.size >= 10) {
+        toast.error('Günlük takas teklifi sınırına (10) ulaştınız. Lütfen yarın tekrar deneyin.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Check if already offered for this listing
+      const existingQ = query(
+        collection(db, 'trade_offers'),
+        where('senderUserId', '==', user?.uid),
+        where('targetListingId', '==', targetListing.id),
+        where('status', 'in', ['pending', 'viewed'])
+      );
+      const existingSnap = await getDocs(existingQ);
+      if (!existingSnap.empty) {
+        toast.error('Bu ilan için zaten aktif bir teklifiniz bulunuyor.');
+        setSubmitting(false);
+        return;
+      }
+
       const offerData = {
         targetListingId: targetListing.id,
         senderUserId: user?.uid,
@@ -99,12 +156,30 @@ export default function TradeOffer() {
         message: message.trim(),
         status: 'pending',
         lastActionBy: user?.uid,
+        parentOfferId: counterOfferId || null,
         expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
       const offerRef = await addDoc(collection(db, 'trade_offers'), offerData);
+
+      // If counter offer, update parent
+      if (counterOfferId) {
+        await updateDoc(doc(db, 'trade_offers', counterOfferId), {
+          status: 'countered',
+          updatedAt: serverTimestamp()
+        });
+        
+        await addDoc(collection(db, 'trade_status_history'), {
+          tradeOfferId: counterOfferId,
+          oldStatus: 'pending',
+          newStatus: 'countered',
+          changedBy: user?.uid,
+          note: 'Karşı teklif oluşturuldu',
+          createdAt: serverTimestamp()
+        });
+      }
 
       // Add items
       for (const item of selectedListings) {
@@ -131,22 +206,24 @@ export default function TradeOffer() {
         oldStatus: null,
         newStatus: 'pending',
         changedBy: user?.uid,
-        note: 'Teklif oluşturuldu',
+        note: counterOfferId ? 'Karşı teklif olarak oluşturuldu' : 'Teklif oluşturuldu',
         createdAt: serverTimestamp()
       });
 
       // Send notification
       await addDoc(collection(db, 'notifications'), {
         userId: targetListing.sellerId,
-        type: 'new_trade_offer',
-        title: 'Yeni Takas Teklifi',
-        body: `${targetListing.title} ilanınız için yeni bir takas teklifi aldınız.`,
+        type: 'info',
+        title: counterOfferId ? 'Yeni Karşı Teklif' : 'Yeni Takas Teklifi',
+        message: counterOfferId 
+          ? `${targetListing.title} ilanınız için bir karşı teklif aldınız.`
+          : `${targetListing.title} ilanınız için yeni bir takas teklifi aldınız.`,
         isRead: false,
         link: `/trade/offers/${offerRef.id}`,
         createdAt: serverTimestamp()
       });
 
-      toast.success('Takas teklifiniz başarıyla gönderildi!');
+      toast.success(counterOfferId ? 'Karşı teklifiniz gönderildi!' : 'Takas teklifiniz başarıyla gönderildi!');
       navigate(`/trade/offers/${offerRef.id}`);
     } catch (error) {
       console.error('Error submitting trade offer:', error);

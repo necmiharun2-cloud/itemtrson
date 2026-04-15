@@ -125,23 +125,23 @@ export default function TradeOfferDetail() {
       // Notify the other party
       const otherUserId = user.uid === offer.senderUserId ? offer.receiverUserId : offer.senderUserId;
       let title = '';
-      let body = '';
+      let message = '';
       if (action === 'accepted') {
         title = 'Takas Teklifi Kabul Edildi!';
-        body = 'Teklifiniz kabul edildi. İlgili ilanlar kilitlendi.';
+        message = 'Teklifiniz kabul edildi. İlgili ilanlar kilitlendi.';
       } else if (action === 'rejected') {
         title = 'Takas Teklifi Reddedildi';
-        body = 'Takas teklifiniz reddedildi.';
+        message = 'Takas teklifiniz reddedildi.';
       } else if (action === 'cancelled') {
         title = 'Takas Teklifi İptal Edildi';
-        body = 'Karşı taraf takas teklifini iptal etti.';
+        message = 'Karşı taraf takas teklifini iptal etti.';
       }
 
       await addDoc(collection(db, 'notifications'), {
         userId: otherUserId,
-        type: `trade_${action}`,
+        type: 'info',
         title,
-        body,
+        message,
         isRead: false,
         link: `/trade/offers/${offer.id}`,
         createdAt: serverTimestamp()
@@ -152,6 +152,81 @@ export default function TradeOfferDetail() {
     } catch (error) {
       console.error('Action error:', error);
       toast.error('İşlem gerçekleştirilemedi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const [chatMessage, setChatMessage] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  useEffect(() => {
+    if (!id || !user) return;
+    const q = query(
+      collection(db, 'trade_messages'),
+      where('tradeOfferId', '==', id)
+    );
+    
+    const fetchMessages = async () => {
+      const snap = await getDocs(q);
+      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+      setMessages(msgs);
+    };
+
+    fetchMessages();
+  }, [id, user]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatMessage.trim() || !id || !user) return;
+    setSendingMessage(true);
+    try {
+      const msgData = {
+        tradeOfferId: id,
+        senderId: user.uid,
+        senderName: user.displayName || 'Kullanıcı',
+        text: chatMessage.trim(),
+        createdAt: serverTimestamp()
+      };
+      const docRef = await addDoc(collection(db, 'trade_messages'), msgData);
+      setMessages([...messages, { id: docRef.id, ...msgData, createdAt: { seconds: Date.now() / 1000 } }]);
+      setChatMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Mesaj gönderilemedi.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleOpenDispute = async () => {
+    if (!offer || !user) return;
+    const reason = window.prompt('Anlaşmazlık sebebinizi kısaca açıklayın:');
+    if (!reason) return;
+
+    setActionLoading(true);
+    try {
+      await addDoc(collection(db, 'trade_disputes'), {
+        tradeOfferId: offer.id,
+        senderUserId: user.uid,
+        receiverUserId: user.uid === offer.senderUserId ? offer.receiverUserId : offer.senderUserId,
+        reason,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+
+      await updateDoc(doc(db, 'trade_offers', offer.id), {
+        status: 'disputed',
+        updatedAt: serverTimestamp()
+      });
+
+      setOffer({ ...offer, status: 'disputed' });
+      toast.success('Anlaşmazlık kaydı oluşturuldu. Destek ekibimiz inceleyecektir.');
+    } catch (error) {
+      console.error('Dispute error:', error);
+      toast.error('Anlaşmazlık kaydı oluşturulamadı.');
     } finally {
       setActionLoading(false);
     }
@@ -172,6 +247,7 @@ export default function TradeOfferDetail() {
       case 'accepted': return <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">Kabul Edildi</span>;
       case 'rejected': return <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold">Reddedildi</span>;
       case 'cancelled': return <span className="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-xs font-bold">İptal Edildi</span>;
+      case 'disputed': return <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold">Anlaşmazlık</span>;
       default: return <span className="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-xs font-bold">{status}</span>;
     }
   };
@@ -199,6 +275,13 @@ export default function TradeOfferDetail() {
           <div>
             <h3 className="text-emerald-400 font-bold mb-1">Anlaşma Sağlandı!</h3>
             <p className="text-sm text-emerald-400/80">Bu takas teklifi kabul edildi ve ilgili ilanlar kilitlendi. Lütfen takas işlemini tamamlamak için karşı taraf ile iletişime geçin.</p>
+            <button 
+              onClick={handleOpenDispute}
+              className="mt-3 text-xs text-red-400 hover:underline flex items-center gap-1"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Sorun mu var? Anlaşmazlık Aç
+            </button>
           </div>
         </div>
       )}
@@ -248,13 +331,65 @@ export default function TradeOfferDetail() {
         </div>
       </div>
 
-      {/* Message */}
-      {offer.message && (
-        <div className="bg-[#1a1b23] rounded-xl border border-white/5 p-6 mb-8">
-          <h3 className="text-sm font-bold text-gray-400 uppercase mb-3">Teklif Mesajı</h3>
-          <p className="text-white text-sm bg-[#111218] p-4 rounded-xl border border-white/5">{offer.message}</p>
+      {/* Message & Chat */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="lg:col-span-1">
+          {offer.message && (
+            <div className="bg-[#1a1b23] rounded-xl border border-white/5 p-6 h-full">
+              <h3 className="text-sm font-bold text-gray-400 uppercase mb-3">Teklif Mesajı</h3>
+              <p className="text-white text-sm bg-[#111218] p-4 rounded-xl border border-white/5">{offer.message}</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <div className="lg:col-span-2">
+          <div className="bg-[#1a1b23] rounded-xl border border-white/5 p-6 flex flex-col h-[400px]">
+            <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Takas Sohbeti
+            </h3>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex flex-col ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[80%] p-3 rounded-xl text-sm ${
+                    msg.senderId === user?.uid 
+                      ? 'bg-amber-500 text-white rounded-tr-none' 
+                      : 'bg-[#111218] text-gray-300 border border-white/5 rounded-tl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-gray-500 mt-1">
+                    {msg.createdAt?.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Gönderiliyor...'}
+                  </span>
+                </div>
+              ))}
+              {messages.length === 0 && (
+                <div className="flex-1 flex items-center justify-center text-gray-500 text-sm italic">
+                  Henüz mesaj yok. Takas detaylarını burada konuşabilirsiniz.
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <input
+                type="text"
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Mesajınızı yazın..."
+                className="flex-1 bg-[#111218] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={sendingMessage || !chatMessage.trim()}
+                className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white p-2 rounded-xl transition-colors"
+              >
+                <Check className="w-5 h-5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       {/* Actions */}
       {(offer.status === 'pending' || offer.status === 'viewed') && (
@@ -268,6 +403,14 @@ export default function TradeOfferDetail() {
               >
                 <X className="w-5 h-5" />
                 Reddet
+              </button>
+              <button
+                onClick={() => navigate(`/trade/offer/${targetItem.id}?counter=${offer.id}`)}
+                disabled={actionLoading}
+                className="px-6 py-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-bold rounded-xl transition-colors flex items-center gap-2"
+              >
+                <ArrowRightLeft className="w-5 h-5" />
+                Karşı Teklif Ver
               </button>
               <button
                 onClick={() => handleAction('accepted')}

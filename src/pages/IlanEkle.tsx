@@ -897,6 +897,28 @@ export default function IlanEkle() {
                               <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                             </label>
                           </div>
+                          <div className="md:col-span-2 space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">İstediğiniz Kategoriler (Virgülle ayırın)</label>
+                              <input
+                                type="text"
+                                value={formData.desiredCategories.join(', ')}
+                                onChange={(e) => setFormData({ ...formData, desiredCategories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                placeholder="Örn: Valorant, Steam, Roblox"
+                                className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#5b68f6] transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">İstediğiniz Oyunlar / Ürünler (Virgülle ayırın)</label>
+                              <input
+                                type="text"
+                                value={formData.desiredGames.join(', ')}
+                                onChange={(e) => setFormData({ ...formData, desiredGames: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                placeholder="Örn: VCT Skinli Hesap, Ejder Vandal"
+                                className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#5b68f6] transition-colors"
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
