@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-type TabKey = 'withdrawals' | 'support' | 'moderation' | 'kyc' | 'users' | 'disputes' | 'finance' | 'logs' | 'settings';
+type TabKey = 'withdrawals' | 'support' | 'moderation' | 'kyc' | 'users' | 'disputes' | 'trades' | 'trade_disputes' | 'finance' | 'logs' | 'settings';
 
 export default function AdminPanel() {
   const { user, profile, loading } = useAuth();
@@ -16,6 +16,8 @@ export default function AdminPanel() {
   const [kycQueue, setKycQueue] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [tradeDisputes, setTradeDisputes] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [adminLogs, setAdminLogs] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -70,6 +72,8 @@ export default function AdminPanel() {
         kycSnap,
         userSnap,
         disputeSnap,
+        tradeSnap,
+        tradeDisputeSnap,
         txSnap,
         logSnap,
       ] = await Promise.all([
@@ -79,6 +83,8 @@ export default function AdminPanel() {
         getDocs(query(collection(db, 'kycRequests'), orderBy('createdAt', 'desc'), limit(100))),
         getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(100))),
         getDocs(query(collection(db, 'disputes'), orderBy('createdAt', 'desc'), limit(100))),
+        getDocs(query(collection(db, 'trade_offers'), orderBy('createdAt', 'desc'), limit(100))),
+        getDocs(query(collection(db, 'trade_disputes'), orderBy('createdAt', 'desc'), limit(100))),
         getDocs(query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(200))),
         getDocs(query(collection(db, 'adminLogs'), orderBy('createdAt', 'desc'), limit(200))),
       ]);
@@ -89,6 +95,8 @@ export default function AdminPanel() {
       setKycQueue(kycSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setUsers(userSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setDisputes(disputeSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTrades(tradeSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTradeDisputes(tradeDisputeSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setTransactions(txSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setAdminLogs(logSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch {
@@ -267,6 +275,77 @@ export default function AdminPanel() {
     }
   };
 
+  const resolveTradeDispute = async (d: any, decision: 'cancel_trade' | 'complete_trade') => {
+    if (!isStaff) return;
+    const note = window.prompt('Karar notu girin:') || '';
+    try {
+      await updateDoc(doc(db, 'trade_disputes', d.id), {
+        status: 'resolved',
+        decision,
+        note,
+        resolvedBy: user?.uid || '',
+        resolvedAt: serverTimestamp(),
+      });
+
+      if (decision === 'cancel_trade') {
+        // Update trade offer status
+        await updateDoc(doc(db, 'trade_offers', d.tradeOfferId), {
+          status: 'cancelled',
+          updatedAt: serverTimestamp()
+        });
+
+        // Unlock items
+        const itemsQ = query(collection(db, 'trade_offer_items'), where('tradeOfferId', '==', d.tradeOfferId));
+        const itemsSnap = await getDocs(itemsQ);
+        for (const itemDoc of itemsSnap.docs) {
+          const itemData = itemDoc.data();
+          await updateDoc(doc(db, 'products', itemData.listingId), {
+            status: 'active',
+            lockedByTradeId: null
+          });
+        }
+      } else {
+        await updateDoc(doc(db, 'trade_offers', d.tradeOfferId), {
+          status: 'completed',
+          updatedAt: serverTimestamp()
+        });
+
+        // Mark items as sold
+        const itemsQ = query(collection(db, 'trade_offer_items'), where('tradeOfferId', '==', d.tradeOfferId));
+        const itemsSnap = await getDocs(itemsQ);
+        for (const itemDoc of itemsSnap.docs) {
+          const itemData = itemDoc.data();
+          await updateDoc(doc(db, 'products', itemData.listingId), {
+            status: 'sold',
+            lockedByTradeId: d.tradeOfferId
+          });
+        }
+      }
+
+      await logAction('tradeDispute.resolve', 'trade_disputes', d.id, { decision, note });
+      toast.success('Takas uyuşmazlığı çözümlendi.');
+
+      // Notify both parties
+      const parties = [d.senderUserId, d.receiverUserId];
+      for (const userId of parties) {
+        await addDoc(collection(db, 'notifications'), {
+          userId,
+          type: 'info',
+          title: 'Takas Uyuşmazlığı Çözüldü',
+          message: `Uyuşmazlık kararı: ${decision === 'cancel_trade' ? 'Takas iptal edildi' : 'Takas tamamlandı'}. Not: ${note}`,
+          isRead: false,
+          link: `/trade/offers/${d.tradeOfferId}`,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      loadAll();
+    } catch (error) {
+      console.error('Trade dispute resolution error:', error);
+      toast.error('Takas uyuşmazlığı çözümlenemedi.');
+    }
+  };
+
   const addManualAdjustment = async () => {
     const userId = window.prompt('Kullanıcı ID:') || '';
     const amount = Number(window.prompt('Tutar (+/-):') || 0);
@@ -321,6 +400,8 @@ export default function AdminPanel() {
           ['kyc', 'KYC'],
           ['users', 'Kullanıcılar'],
           ['disputes', 'Uyuşmazlıklar'],
+          ['trades', 'Takaslar'],
+          ['trade_disputes', 'Takas Uyuşmazlıkları'],
           ['finance', 'Finans'],
           ['logs', 'Audit Log'],
           ['settings', 'Site Ayarları'],
@@ -418,6 +499,25 @@ export default function AdminPanel() {
               <div className="flex gap-2">
                 <button className="px-3 py-1 bg-red-600 rounded text-xs" onClick={() => resolveDispute(d, 'refund_buyer')}>İade Et</button>
                 <button className="px-3 py-1 bg-emerald-600 rounded text-xs" onClick={() => resolveDispute(d, 'release_seller')}>Satıcıya Bırak</button>
+              </div>
+            </div>
+          ))}
+
+          {tab === 'trades' && trades.map((t) => (
+            <div key={t.id} className="bg-[#1a1b23] p-4 rounded border border-white/5 flex items-center justify-between gap-3">
+              <div className="text-sm text-gray-300">Trade: {t.id} - {t.status} - Sender: {t.senderUserId} - Receiver: {t.receiverUserId}</div>
+              <div className="flex gap-2">
+                <Link to={`/trade/offers/${t.id}`} className="px-3 py-1 bg-blue-600 rounded text-xs">Detay</Link>
+              </div>
+            </div>
+          ))}
+
+          {tab === 'trade_disputes' && tradeDisputes.map((d) => (
+            <div key={d.id} className="bg-[#1a1b23] p-4 rounded border border-white/5 flex items-center justify-between gap-3">
+              <div className="text-sm text-gray-300">Trade: {d.tradeOfferId} - {d.status} - {d.reason}</div>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 bg-red-600 rounded text-xs" onClick={() => resolveTradeDispute(d, 'cancel_trade')}>Takası İptal Et</button>
+                <button className="px-3 py-1 bg-emerald-600 rounded text-xs" onClick={() => resolveTradeDispute(d, 'complete_trade')}>Takası Tamamla</button>
               </div>
             </div>
           ))}

@@ -193,6 +193,18 @@ export default function TradeOfferDetail() {
       const docRef = await addDoc(collection(db, 'trade_messages'), msgData);
       setMessages([...messages, { id: docRef.id, ...msgData, createdAt: { seconds: Date.now() / 1000 } }]);
       setChatMessage('');
+
+      // Notify the other party about the new message
+      const otherUserId = user.uid === offer.senderUserId ? offer.receiverUserId : offer.senderUserId;
+      await addDoc(collection(db, 'notifications'), {
+        userId: otherUserId,
+        type: 'info',
+        title: 'Yeni Takas Mesajı',
+        message: `${user.displayName || 'Kullanıcı'} size bir mesaj gönderdi.`,
+        isRead: false,
+        link: `/trade/offers/${id}`,
+        createdAt: serverTimestamp()
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Mesaj gönderilemedi.');
@@ -224,6 +236,18 @@ export default function TradeOfferDetail() {
 
       setOffer({ ...offer, status: 'disputed' });
       toast.success('Anlaşmazlık kaydı oluşturuldu. Destek ekibimiz inceleyecektir.');
+
+      // Notify the other party about the dispute
+      const otherUserId = user.uid === offer.senderUserId ? offer.receiverUserId : offer.senderUserId;
+      await addDoc(collection(db, 'notifications'), {
+        userId: otherUserId,
+        type: 'warning',
+        title: 'Takas Uyuşmazlığı Bildirildi',
+        message: 'Bu takas için bir uyuşmazlık kaydı oluşturuldu. Destek ekibi inceleyecektir.',
+        isRead: false,
+        link: `/trade/offers/${offer.id}`,
+        createdAt: serverTimestamp()
+      });
     } catch (error) {
       console.error('Dispute error:', error);
       toast.error('Anlaşmazlık kaydı oluşturulamadı.');
